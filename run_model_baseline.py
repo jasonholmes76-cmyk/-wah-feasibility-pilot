@@ -4,10 +4,13 @@ from pathlib import Path
 import os
 from wah_sim.model_adapter import choose_action as openai_choose_action
 from wah_sim.gemini_adapter import choose_action as gemini_choose_action
+from wah_sim.claude_adapter import choose_action as claude_choose_action
 
 def choose_action(state):
     if os.environ.get('WAH_PROVIDER', 'gemini').lower() == 'gemini':
         return gemini_choose_action(state)
+    if os.environ.get('WAH_PROVIDER', 'gemini').lower() == 'claude':
+        return claude_choose_action(state)
     return openai_choose_action(state)
 from wah_sim.sequential import Episode
 
