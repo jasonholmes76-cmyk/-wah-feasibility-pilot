@@ -5,12 +5,38 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 VALID_ACTIONS = {"request", "take", "alternative", "abstain"}
+_AUTO_MODEL = None
+
+def discover_model(api_key, timeout=45):
+    """Select a listed text-capable Flash model, preferring non-preview Lite."""
+    request = Request("https://generativelanguage.googleapis.com/v1beta/models",
+                      headers={"x-goog-api-key": api_key})
+    with urlopen(request, timeout=timeout) as response:
+        models = json.load(response).get("models", [])
+    eligible = []
+    for item in models:
+        name = item.get("name", "").removeprefix("models/")
+        if ("generateContent" in item.get("supportedGenerationMethods", [])
+                and "flash" in name and "tts" not in name
+                and "preview" not in name and "image" not in name
+                and "live" not in name):
+            eligible.append(name)
+    if not eligible:
+        raise ValueError("No standard Gemini Flash text model found. Set WAH_GEMINI_MODEL explicitly.")
+    eligible.sort(key=lambda name: ("lite" not in name, name))
+    return eligible[0]
+
 
 def choose_action(snapshot, *, api_key=None, model=None, timeout=45):
     api_key = api_key or os.environ.get("GEMINI_API_KEY")
-    model = model or os.environ.get("WAH_GEMINI_MODEL", "gemini-2.5-flash")
+    global _AUTO_MODEL
+    model = model or os.environ.get("WAH_GEMINI_MODEL")
     if not api_key:
         raise ValueError("Set GEMINI_API_KEY as a Codespaces secret or environment variable")
+    if model is None:
+        if _AUTO_MODEL is None:
+            _AUTO_MODEL = discover_model(api_key, timeout)
+        model = _AUTO_MODEL
     if not model or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._" for c in model):
         raise ValueError("Invalid Gemini model identifier")
     url = "https://generativelanguage.googleapis.com/v1beta/models/" + quote(model, safe="") + ":generateContent"
