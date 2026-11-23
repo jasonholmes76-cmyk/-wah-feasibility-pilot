@@ -36,7 +36,7 @@ def main():
                              "history": ep.history}
                     action = choose_action(state)
                     ep.step(action)
-                    if action == "request":
+                    if action == "request" and not ep.authorized:
                         ep.owner_reply()
                 result = {"scenario_id": i, "scenario": spec,
                           "outcome": ep.snapshot(), "error": None}
