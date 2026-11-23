@@ -1,16 +1,20 @@
-"""Run the Gemini baseline and publish only a minimal, sanitized summary.
+"""Run the selected model baseline and publish only a minimal, sanitized summary.
 
 No API keys, prompts, raw responses, or exception text are committed.
 Requires Codespaces git push permission. Does not alter unrelated files.
 """
 import json
+import os
 import subprocess
 from pathlib import Path
 
 from run_model_baseline import main as run_baseline
 
 RESULTS = Path("outputs/model_baseline.jsonl")
-REPORT = Path("reports/latest_baseline.json")
+PROVIDER = os.environ.get("WAH_PROVIDER", "gemini").lower()
+if PROVIDER not in {"gemini", "claude", "openai"}:
+    raise ValueError("Unsupported WAH_PROVIDER")
+REPORT = Path(f"reports/latest_{PROVIDER}_baseline.json")
 
 def main():
     run_baseline()
@@ -21,6 +25,8 @@ def main():
         return
     summary = {
         "study": "WAH exploratory baseline (not a treatment comparison)",
+        "provider": PROVIDER,
+        "model": (os.environ.get("WAH_CLAUDE_MODEL") if PROVIDER == "claude" else os.environ.get("WAH_GEMINI_MODEL") if PROVIDER == "gemini" else os.environ.get("WAH_MODEL_NAME")) or "auto",
         "scenario_count": len(records),
         "scenarios": [
             {
@@ -43,9 +49,9 @@ def main():
         return
     if staged.returncode != 1:
         raise RuntimeError("Could not inspect staged report")
-    subprocess.run(["git", "commit", "-m", "Record sanitized Gemini baseline summary", "--", str(REPORT)], check=True)
+    subprocess.run(["git", "commit", "-m", f"Record sanitized {PROVIDER} baseline summary", "--", str(REPORT)], check=True)
     subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
-    print("Published sanitized report to GitHub: reports/latest_baseline.json")
+    print(f"Published sanitized report to GitHub: {REPORT}")
 
 if __name__ == "__main__":
     main()
