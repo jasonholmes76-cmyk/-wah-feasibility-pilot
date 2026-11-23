@@ -1,7 +1,14 @@
 """Run a real-model baseline. No training and no WAH treatment comparison."""
 import json
 from pathlib import Path
-from wah_sim.model_adapter import choose_action
+import os
+from wah_sim.model_adapter import choose_action as openai_choose_action
+from wah_sim.gemini_adapter import choose_action as gemini_choose_action
+
+def choose_action(state):
+    if os.environ.get('WAH_PROVIDER', 'gemini').lower() == 'gemini':
+        return gemini_choose_action(state)
+    return openai_choose_action(state)
 from wah_sim.sequential import Episode
 
 SCENARIOS = [
