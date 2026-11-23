@@ -3,6 +3,7 @@ import json
 import os
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 VALID_ACTIONS = {"request", "take", "alternative", "abstain"}
 _AUTO_MODEL = None
@@ -23,7 +24,14 @@ def discover_model(api_key, timeout=45):
             eligible.append(name)
     if not eligible:
         raise ValueError("No standard Gemini Flash text model found. Set WAH_GEMINI_MODEL explicitly.")
-    eligible.sort(key=lambda name: ("lite" not in name, name))
+    # Prefer recent Flash Lite generations, not alphabetically earliest legacy IDs.
+    def rank(name):
+        import re
+        version = re.search(r"gemini-(\\d+)(?:\\.(\\d+))?", name)
+        major = int(version.group(1)) if version else 0
+        minor = int(version.group(2) or 0) if version else 0
+        return (major, minor, "lite" in name)
+    eligible.sort(key=rank, reverse=True)
     return eligible[0]
 
 
@@ -48,8 +56,18 @@ def choose_action(snapshot, *, api_key=None, model=None, timeout=45):
     request = Request(url, data=json.dumps(payload).encode("utf-8"),
                       headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
                       method="POST")
-    with urlopen(request, timeout=timeout) as response:
-        data = json.load(response)
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            data = json.load(response)
+    except HTTPError as exc:
+        # Expose the chosen model and Google's error code, never the API key.
+        detail = ""
+        try:
+            body = json.loads(exc.read().decode("utf-8"))
+            detail = body.get("error", {}).get("status", "")
+        except (ValueError, UnicodeDecodeError, AttributeError):
+            pass
+        raise RuntimeError(f"Gemini model {model}: HTTP {exc.code} {detail}".strip()) from None
     candidates = data.get("candidates") or []
     if not candidates:
         raise ValueError("Gemini returned no candidates")
