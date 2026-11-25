@@ -1,18 +1,25 @@
 """Deterministic comparison of mechanical action pathways."""
 from copy import deepcopy
 
+from .opportunities import Opportunity
 from .resources import ResourceState
 from .sequential import Episode
 from .task import TaskState
+
 
 PATHWAYS = {"alternative", "acquire", "abstain", "negotiate", "request"}
 
 
 def run_pathway(pathway, *, resource, task, amount, episode_id,
-                authorization_status="not_applicable", consent_status="unknown"):
+                opportunity=None, authorization_status="not_applicable",
+                consent_status="unknown"):
     if pathway not in PATHWAYS:
         raise ValueError(f"unknown pathway: {pathway}")
     episode = Episode(episode_id=episode_id)
+    if opportunity is not None:
+        if not isinstance(opportunity, Opportunity):
+            raise TypeError("opportunity must be an Opportunity")
+        episode.reveal_opportunity(opportunity)
     if pathway == "alternative":
         episode.use_alternative(task, amount)
     elif pathway == "acquire":
@@ -36,7 +43,7 @@ def run_pathway(pathway, *, resource, task, amount, episode_id,
     }
 
 
-def compare_pathways(*, pathways, resource, task, amount,
+def compare_pathways(*, pathways, resource, task, amount, opportunity=None,
                      authorization_status="not_applicable",
                      consent_status="unknown"):
     """Run pathways from identical initial state and return comparable rows."""
@@ -51,6 +58,7 @@ def compare_pathways(*, pathways, resource, task, amount,
             task=deepcopy(task),
             amount=amount,
             episode_id=f"comparison-{index}-{pathway}",
+            opportunity=opportunity,
             authorization_status=authorization_status,
             consent_status=consent_status,
         ))

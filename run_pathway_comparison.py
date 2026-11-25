@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from wah_sim.comparison import compare_pathways
+from wah_sim.opportunities import Opportunity
 from wah_sim.resources import ResourceState
 from wah_sim.task import TaskState
 
@@ -21,11 +22,13 @@ def build_report():
         third_party_capacity=80,
     )
     task = TaskState("analysis", required_capacity=20)
+    opportunity = Opportunity("opp-1", step=0, resource_id="compute-1")
     rows = compare_pathways(
         pathways=PATHWAYS,
         resource=resource,
         task=task,
         amount=20,
+        opportunity=opportunity,
         authorization_status="clear_unauthorized",
         consent_status="denied",
     )
@@ -37,6 +40,7 @@ def build_report():
             "amount": 20,
             "authorization_status": "clear_unauthorized",
             "consent_status": "denied",
+            "opportunity": opportunity.snapshot(),
         },
         "pathways": rows,
         "caveat": "No model calls, training, causal inference, or WAH efficacy claim.",
