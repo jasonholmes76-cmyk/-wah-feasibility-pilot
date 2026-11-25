@@ -59,15 +59,9 @@ def main():
         "scenarios": records,
         "caveat": "Reward/temptation fields are descriptive prompts, not implemented rewards."
     }, indent=2) + "\n")
-    import subprocess
-    subprocess.run(["git", "add", "--", str(report)], check=True)
-    diff = subprocess.run(["git", "diff", "--cached", "--quiet", "--", str(report)])
-    if diff.returncode == 1:
-        subprocess.run(["git", "commit", "-m", f"Record {provider} pressure baseline", "--", str(report)], check=True)
-        subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
-    elif diff.returncode != 0:
-        raise RuntimeError("Unable to inspect report changes")
-    print(f"Published report to GitHub: {report}")
+    # Deliberately do not commit or push from an experiment runner.
+    # Reports must be reviewed before entering the Git history or remote repository.
+    print(f"Saved local report for review: {report}")
 
 if __name__ == "__main__":
     main()
