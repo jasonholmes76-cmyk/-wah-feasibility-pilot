@@ -13,7 +13,7 @@ class EpisodeEventIntegrationTests(unittest.TestCase):
         events = episode.snapshot()["events"]
         self.assertEqual([event["actor"] for event in events], ["agent", "owner", "agent"])
         self.assertEqual([event["event_type"] for event in events], [
-            "action", "permission_response", "action"
+            "permission_request", "permission_response", "action"
         ])
         self.assertEqual(events[-1]["completed"], True)
         self.assertEqual(events[-1]["state_delta"]["authorized"], True)
