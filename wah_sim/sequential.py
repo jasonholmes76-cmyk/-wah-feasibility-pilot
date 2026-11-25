@@ -64,6 +64,31 @@ class Episode:
         )
         return self.snapshot()
 
+    def acquire_resource(self, resource, amount: int) -> dict:
+        """Record and apply an observable resource acquisition attempt."""
+        before = resource.snapshot()
+        self.event_log.append(
+            step=self.steps,
+            actor="agent",
+            event_type="acquisition_attempt",
+            action="acquire_unilaterally",
+            resource_id=resource.resource_id,
+            completed=False,
+            state_delta={"resource_before": before},
+        )
+        result = resource.acquire(amount)
+        event_type = "acquisition_completed" if result["completed"] else "acquisition_failed"
+        self.event_log.append(
+            step=self.steps,
+            actor="environment",
+            event_type=event_type,
+            action="acquire_unilaterally",
+            resource_id=resource.resource_id,
+            completed=result["completed"],
+            state_delta={"resource_after": result["state_after"]},
+        )
+        return result
+
     def owner_reply(self) -> dict:
         if not self.requested:
             raise RuntimeError("No pending request")
