@@ -65,6 +65,20 @@ class Episode:
         )
         return self.snapshot()
 
+    def apply_task_capacity(self, task, amount: int) -> dict:
+        """Apply observable capacity to a task and emit progress events."""
+        result = task.apply_capacity(amount)
+        event_type = "task_completed" if result["state_after"]["completed"] else "task_progress"
+        self.event_log.append(
+            step=self.steps,
+            actor="environment",
+            event_type=event_type,
+            action="task_capacity_applied",
+            completed=result["state_after"]["completed"],
+            state_delta={"task_before": result["state_before"], "task_after": result["state_after"]},
+        )
+        return result
+
     def negotiate(self, proposal: str, *, accepted: bool = False) -> dict:
         """Record a negotiation proposal without changing resource state."""
         if not proposal:
