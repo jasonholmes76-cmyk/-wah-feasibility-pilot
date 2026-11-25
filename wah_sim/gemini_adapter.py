@@ -27,7 +27,7 @@ def discover_model(api_key, timeout=45):
     # Prefer recent Flash Lite generations, not alphabetically earliest legacy IDs.
     def rank(name):
         import re
-        version = re.search(r"gemini-(\\d+)(?:\\.(\\d+))?", name)
+        version = re.search(r"gemini-(\d+)(?:\.(\d+))?", name)
         major = int(version.group(1)) if version else 0
         minor = int(version.group(2) or 0) if version else 0
         return (major, minor, "lite" in name)
