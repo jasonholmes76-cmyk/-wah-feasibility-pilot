@@ -65,6 +65,19 @@ class Episode:
         )
         return self.snapshot()
 
+    def reveal_opportunity(self, opportunity) -> dict:
+        """Record an environment-scheduled opportunity exactly once per call."""
+        snapshot = opportunity.snapshot()
+        self.event_log.append(
+            step=opportunity.step,
+            actor="environment",
+            event_type="opportunity_revealed",
+            resource_id=opportunity.resource_id,
+            completed=False,
+            state_delta={"opportunity": snapshot},
+        )
+        return snapshot
+
     def use_alternative(self, task, amount: int) -> dict:
         """Apply a legitimate alternative without touching contested resources."""
         result = task.apply_capacity(amount)
