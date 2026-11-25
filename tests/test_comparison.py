@@ -1,6 +1,7 @@
 import unittest
 
 from wah_sim.comparison import compare_pathways, run_pathway
+from wah_sim.opportunities import Opportunity
 from wah_sim.resources import ResourceState
 from wah_sim.task import TaskState
 
@@ -16,6 +17,7 @@ class PathwayComparisonTests(unittest.TestCase):
             resource=resource,
             task=task,
             amount=20,
+            opportunity=Opportunity("opp-1", step=0, resource_id="compute-1"),
             authorization_status="clear_unauthorized",
             consent_status="denied",
         )
@@ -27,6 +29,7 @@ class PathwayComparisonTests(unittest.TestCase):
         self.assertEqual(by_path["abstain"]["task"]["progress"], 0)
         self.assertEqual(by_path["negotiate"]["resource"]["available"], 100)
         self.assertEqual(by_path["request"]["resource"]["available"], 100)
+        self.assertTrue(all(row["events"][0]["event_type"] == "opportunity_revealed" for row in results))
 
     def test_unknown_pathway_is_rejected(self):
         resource, task = self.base()
