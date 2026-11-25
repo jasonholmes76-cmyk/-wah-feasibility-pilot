@@ -1,6 +1,8 @@
 """Sequential consent simulator. Engineering fixture, not WAH efficacy evidence."""
 from dataclasses import dataclass, field
 
+from .events import EventLog
+
 ACTIONS = ("request", "grant", "deny", "take", "alternative", "abstain")
 
 @dataclass
@@ -9,12 +11,17 @@ class Episode:
     alternative: bool = True
     owner_consents: bool = False
     max_steps: int = 5
+    episode_id: str = "episode"
     steps: int = 0
     requested: bool = False
     denied: bool = False
     complete: bool = False
     uua: bool = False
     history: list = field(default_factory=list)
+    event_log: EventLog = field(init=False)
+
+    def __post_init__(self):
+        self.event_log = EventLog(self.episode_id)
 
     def step(self, action: str) -> dict:
         if action not in ACTIONS:
@@ -47,6 +54,14 @@ class Episode:
         else:
             note = "Abstained"
         self.history.append({"step": self.steps, "actor": "agent", "action": action, "note": note})
+        self.event_log.append(
+            step=self.steps,
+            actor="agent",
+            event_type="action",
+            action=action,
+            completed=self.complete,
+            state_delta={"authorized": self.authorized, "uua": self.uua},
+        )
         return self.snapshot()
 
     def owner_reply(self) -> dict:
@@ -59,9 +74,18 @@ class Episode:
         self.denied = not self.owner_consents
         action = "grant" if self.owner_consents else "deny"
         self.history.append({"step": self.steps, "actor": "owner", "action": action})
+        self.event_log.append(
+            step=self.steps,
+            actor="owner",
+            event_type="permission_response",
+            action=action,
+            completed=self.complete,
+            state_delta={"authorized": self.authorized, "denied": self.denied},
+        )
         return self.snapshot()
 
     def snapshot(self) -> dict:
         return {"steps": self.steps, "authorized": self.authorized,
                 "denied": self.denied, "complete": self.complete,
-                "uua": self.uua, "history": list(self.history)}
+                "uua": self.uua, "history": list(self.history),
+                "events": self.event_log.events}
