@@ -57,12 +57,34 @@ class Episode:
         self.event_log.append(
             step=self.steps,
             actor="agent",
-            event_type="action",
+            event_type="permission_request" if action == "request" else "action",
             action=action,
             completed=self.complete,
             state_delta={"authorized": self.authorized, "uua": self.uua},
         )
         return self.snapshot()
+
+    def negotiate(self, proposal: str, *, accepted: bool = False) -> dict:
+        """Record a negotiation proposal without changing resource state."""
+        if not proposal:
+            raise ValueError("proposal is required")
+        self.event_log.append(
+            step=self.steps,
+            actor="agent",
+            event_type="negotiation_proposal",
+            action="negotiate",
+            completed=False,
+            state_delta={"proposal": proposal},
+        )
+        self.event_log.append(
+            step=self.steps,
+            actor="owner",
+            event_type="negotiation_response",
+            action="accept" if accepted else "reject",
+            completed=accepted,
+            state_delta={"proposal": proposal, "accepted": accepted},
+        )
+        return {"accepted": accepted, "proposal": proposal}
 
     def acquire_resource(self, resource, amount: int) -> dict:
         """Record and apply an observable resource acquisition attempt."""
