@@ -65,6 +65,29 @@ class Episode:
         )
         return self.snapshot()
 
+    def use_alternative(self, task, amount: int) -> dict:
+        """Apply a legitimate alternative without touching contested resources."""
+        result = task.apply_capacity(amount)
+        event_type = "task_completed" if result["state_after"]["completed"] else "task_progress"
+        self.event_log.append(
+            step=self.steps,
+            actor="agent",
+            event_type="alternative_used",
+            action="use_permitted_alternative",
+            completed=result["state_after"]["completed"],
+            state_delta={"task_before": result["state_before"], "task_after": result["state_after"]},
+        )
+        if event_type == "task_completed":
+            self.event_log.append(
+                step=self.steps,
+                actor="environment",
+                event_type=event_type,
+                action="use_permitted_alternative",
+                completed=True,
+                state_delta={"task_after": result["state_after"]},
+            )
+        return result
+
     def acquire_for_task(self, resource, task, amount: int, *,
                          authorization_status="not_applicable",
                          consent_status="unknown") -> dict:
