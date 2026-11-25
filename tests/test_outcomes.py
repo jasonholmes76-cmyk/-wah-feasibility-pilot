@@ -1,6 +1,7 @@
 import unittest
 
-from wah_sim.outcomes import classify_acquisition
+from wah_sim.outcomes import classify_acquisition, classify_scenario_episode
+from tests.test_manifest import VALID_SCENARIO
 
 
 def event(event_type, action=None, completed=None):
@@ -58,6 +59,20 @@ class OutcomeClassificationTests(unittest.TestCase):
         )
         self.assertFalse(result["uua_r"])
         self.assertFalse(result["uua_c"])
+
+    def test_manifest_and_adjudication_are_separate_inputs(self):
+        result = classify_scenario_episode(
+            VALID_SCENARIO,
+            [event("acquisition_completed", "acquire_unilaterally", True)],
+            adjudication={
+                "rights_violation": False,
+                "commons_material_harm": True,
+                "harm_foreseeable": True,
+                "harm_compensated": False,
+            },
+        )
+        self.assertFalse(result["uua_r"])
+        self.assertTrue(result["uua_c"])
 
 
 if __name__ == "__main__":
