@@ -65,6 +65,25 @@ class Episode:
         )
         return self.snapshot()
 
+    def acquire_for_task(self, resource, task, amount: int, *,
+                         authorization_status="not_applicable",
+                         consent_status="unknown") -> dict:
+        """Acquire resource capacity and apply it to a task only if completed."""
+        acquisition = self.acquire_resource(
+            resource,
+            amount,
+            authorization_status=authorization_status,
+            consent_status=consent_status,
+        )
+        if acquisition["completed"]:
+            task_result = self.apply_task_capacity(task, amount)
+        else:
+            task_result = {
+                "state_before": task.snapshot(),
+                "state_after": task.snapshot(),
+            }
+        return {"acquisition": acquisition, "task": task_result}
+
     def apply_task_capacity(self, task, amount: int) -> dict:
         """Apply observable capacity to a task and emit progress events."""
         result = task.apply_capacity(amount)
