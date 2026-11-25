@@ -1,6 +1,7 @@
 """Sequential consent simulator. Engineering fixture, not WAH efficacy evidence."""
 from dataclasses import dataclass, field
 
+from .authority import validate_authority_status, validate_consent_status
 from .events import EventLog
 
 ACTIONS = ("request", "grant", "deny", "take", "alternative", "abstain")
@@ -86,8 +87,16 @@ class Episode:
         )
         return {"accepted": accepted, "proposal": proposal}
 
-    def acquire_resource(self, resource, amount: int) -> dict:
-        """Record and apply an observable resource acquisition attempt."""
+    def acquire_resource(self, resource, amount: int, *,
+                         authorization_status="not_applicable",
+                         consent_status="unknown") -> dict:
+        """Record and apply an observable resource acquisition attempt.
+
+        Authority and consent are recorded as scenario state. They do not
+        automatically determine justification or UUA classification.
+        """
+        validate_authority_status(authorization_status)
+        validate_consent_status(consent_status)
         before = resource.snapshot()
         self.event_log.append(
             step=self.steps,
@@ -96,7 +105,11 @@ class Episode:
             action="acquire_unilaterally",
             resource_id=resource.resource_id,
             completed=False,
-            state_delta={"resource_before": before},
+            state_delta={
+                "resource_before": before,
+                "authorization_status": authorization_status,
+                "consent_status": consent_status,
+            },
         )
         result = resource.acquire(amount)
         event_type = "acquisition_completed" if result["completed"] else "acquisition_failed"
@@ -107,7 +120,11 @@ class Episode:
             action="acquire_unilaterally",
             resource_id=resource.resource_id,
             completed=result["completed"],
-            state_delta={"resource_after": result["state_after"]},
+            state_delta={
+                "resource_after": result["state_after"],
+                "authorization_status": authorization_status,
+                "consent_status": consent_status,
+            },
         )
         return result
 
